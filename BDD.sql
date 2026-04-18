@@ -20,6 +20,19 @@ CREATE TABLE filiere (
   libelle VARCHAR(20) NOT NULL
 );
 GO
+-- Ajout de la table inscription
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'inscription')
+CREATE TABLE inscription (
+    id_inscription INT IDENTITY(1,1) PRIMARY KEY,
+    id_etudiant INT,
+    id_niveau INT,
+    annee_scolaire VARCHAR(9),
+    date_debut DATE,
+    date_fin DATE,
+    CONSTRAINT fk_inscription_etudiant FOREIGN KEY (id_etudiant) REFERENCES etudiant(id_etudiant) ON DELETE CASCADE,
+    CONSTRAINT fk_inscription_niveau FOREIGN KEY (id_niveau) REFERENCES niveau(id_niveau)
+);
+GO
 
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'niveau')
 CREATE TABLE niveau (
