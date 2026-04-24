@@ -1,0 +1,202 @@
+// =====================================================
+// TITRE : Base de données NoSQL - MongoDB
+// BASE : db_univ_nosql
+// OBJECTIF : Gérer les notes des étudiants (version ultra simple)
+// DONNEES : 30 étudiants, 15 cours, ~1200 notes
+// =====================================================
+
+use db_univ_nosql;
+
+// Supprimer les anciennes collections
+db.etudiants.drop();
+db.cours.drop();
+
+// =====================================================
+// 1. COLLECTION COURS (15 cours seulement)
+// =====================================================
+// Chaque cours a : un nom, un coefficient, un enseignant, une filière, un niveau
+// 5 cours pour L1, 5 cours pour L2, 5 cours pour L3 (toutes filières confondues)
+
+db.cours.insertMany([
+    // ===== NIVEAU L1 (5 cours) =====
+    { nom: "Algorithmique", coefficient: 5, enseignant: "DUPONT Sophie", filiere: "Informatique", niveau: "L1" },
+    { nom: "Comptabilite generale", coefficient: 5, enseignant: "PETIT Marie", filiere: "Gestion", niveau: "L1" },
+    { nom: "Grammaire", coefficient: 4, enseignant: "MOREAU Thomas", filiere: "Anglais", niveau: "L1" },
+    { nom: "Base de donnees", coefficient: 4, enseignant: "MARTIN Jean", filiere: "Informatique", niveau: "L1" },
+    { nom: "Finance", coefficient: 4, enseignant: "DURAND Philippe", filiere: "Gestion", niveau: "L1" },
+    
+    // ===== NIVEAU L2 (5 cours) =====
+    { nom: "Programmation Web", coefficient: 3, enseignant: "DUPONT Sophie", filiere: "Informatique", niveau: "L2" },
+    { nom: "Marketing", coefficient: 3, enseignant: "ROBERT Claire", filiere: "Gestion", niveau: "L2" },
+    { nom: "Litterature", coefficient: 3, enseignant: "SIMON Laura", filiere: "Anglais", niveau: "L2" },
+    { nom: "Reseaux", coefficient: 4, enseignant: "BERNARD Pierre", filiere: "Informatique", niveau: "L2" },
+    { nom: "Ressources humaines", coefficient: 3, enseignant: "PETIT Marie", filiere: "Gestion", niveau: "L2" },
+    
+    // ===== NIVEAU L3 (5 cours) =====
+    { nom: "Architecture", coefficient: 3, enseignant: "BERNARD Pierre", filiere: "Informatique", niveau: "L3" },
+    { nom: "Audit", coefficient: 4, enseignant: "DURAND Philippe", filiere: "Gestion", niveau: "L3" },
+    { nom: "Traduction", coefficient: 5, enseignant: "MOREAU Thomas", filiere: "Anglais", niveau: "L3" },
+    { nom: "Projet", coefficient: 5, enseignant: "DUPONT Sophie", filiere: "Informatique", niveau: "L3" },
+    { nom: "Strategie", coefficient: 4, enseignant: "ROBERT Claire", filiere: "Gestion", niveau: "L3" }
+]);
+
+print("✅ Cours insérés : " + db.cours.countDocuments());
+
+// =====================================================
+// 2. LISTES DES NOMS ET PRENOMS
+// =====================================================
+const prenoms = ["Emma", "Lucas", "Chloe", "Hugo", "Lea", "Louis", "Manon", "Arthur", "Ines", "Gabriel"];
+const noms = ["Dupont", "Martin", "Bernard", "Petit", "Durand", "Robert", "Moreau", "Simon", "Laurent", "Michel"];
+
+// =====================================================
+// 3. LISTES DES FILIÈRES, NIVEAUX ET ANNÉES
+// =====================================================
+const filieres = ["Informatique", "Gestion", "Anglais"];
+const niveaux = ["L1", "L2", "L3"];
+const anneeScolaires = ["2021-2022", "2022-2023", "2023-2024"];
+
+// =====================================================
+// 4. FONCTION DATE ALÉATOIRE
+// =====================================================
+function dateAleatoire(anneeDebut, semestre) {
+    let debut, fin;
+    
+    if (semestre === 1) {
+        debut = anneeDebut + "-09-01";
+        fin = anneeDebut + "-12-31";
+    } else {
+        debut = (anneeDebut + 1) + "-01-01";
+        fin = (anneeDebut + 1) + "-06-30";
+    }
+    
+    const debutDate = new Date(debut);
+    const finDate = new Date(fin);
+    const tempsAleatoire = debutDate.getTime() + Math.random() * (finDate.getTime() - debutDate.getTime());
+    
+    return new Date(tempsAleatoire).toISOString().split('T')[0];
+}
+
+// =====================================================
+// 5. GÉNÉRATION DES ÉTUDIANTS (30 étudiants)
+// =====================================================
+// 10 étudiants par filière
+
+const etudiants = [];
+
+for (let f = 0; f < filieres.length; f++) {
+    const filiere = filieres[f];
+    
+    // 10 étudiants par filière
+    for (let i = 0; i < 10; i++) {
+        
+        const nom = noms[Math.floor(Math.random() * noms.length)];
+        const prenom = prenoms[Math.floor(Math.random() * prenoms.length)];
+        
+        const historiqueNiveaux = [];
+        const notes = [];
+        
+        // Parcourir les 3 années (L1, L2, L3)
+        for (let a = 0; a < anneeScolaires.length; a++) {
+            const anneeScolaire = anneeScolaires[a];
+            const niveau = niveaux[a];
+            const anneeDebut = parseInt(anneeScolaire.split('-')[0]);
+            
+            // Historique du niveau
+            historiqueNiveaux.push({
+                annee_scolaire: anneeScolaire,
+                niveau: niveau,
+                date_debut: anneeDebut + "-09-01",
+                date_fin: (anneeDebut + 1) + "-06-30"
+            });
+            
+            // Récupérer les cours pour ce niveau (toutes filières confondues)
+            // Mais on ne prend que les cours de SA filière
+            const coursDuNiveau = db.cours.find({ 
+                niveau: niveau,
+                filiere: filiere   // ← important : seulement les cours de sa filière
+            }).toArray();
+            
+            // Pour chaque cours (1 à 2 cours par niveau selon la filière)
+            for (let c = 0; c < coursDuNiveau.length; c++) {
+                const cours = coursDuNiveau[c];
+                
+                // Semestre 1 et 2
+                for (let semestre = 1; semestre <= 2; semestre++) {
+                    
+                    // 2 DEVOIRS (au lieu de 6)
+                    for (let d = 0; d < 2; d++) {
+                        const valeur = (6 + Math.random() * 14).toFixed(2);
+                        const date = dateAleatoire(anneeDebut, semestre);
+                        
+                        notes.push({
+                            cours: cours.nom,
+                            coefficient: cours.coefficient,
+                            enseignant: cours.enseignant,
+                            valeur: parseFloat(valeur),
+                            date: date,
+                            type_evaluation: "Devoir",
+                            semestre: semestre,
+                            annee_scolaire: anneeScolaire,
+                            niveau: niveau
+                        });
+                    }
+                    
+                    // 1 EXAMEN
+                    const valeur = (8 + Math.random() * 12).toFixed(2);
+                    const date = dateAleatoire(anneeDebut, semestre);
+                    
+                    notes.push({
+                        cours: cours.nom,
+                        coefficient: cours.coefficient,
+                        enseignant: cours.enseignant,
+                        valeur: parseFloat(valeur),
+                        date: date,
+                        type_evaluation: "Exam",
+                        semestre: semestre,
+                        annee_scolaire: anneeScolaire,
+                        niveau: niveau
+                    });
+                }
+            }
+        }
+        
+        etudiants.push({
+            nom: nom,
+            prenom: prenom,
+            filiere: filiere,
+            historique_niveaux: historiqueNiveaux,
+            notes: notes
+        });
+    }
+}
+
+// Insérer les étudiants
+db.etudiants.insertMany(etudiants);
+
+// =====================================================
+// 6. VÉRIFICATION
+// =====================================================
+print("\n=== VÉRIFICATION ===");
+print("✅ Étudiants : " + db.etudiants.countDocuments());
+
+let totalNotes = 0;
+db.etudiants.find().forEach(e => { totalNotes += e.notes.length; });
+print("✅ Total notes : " + totalNotes);
+
+print("\n=== RÉPARTITION PAR FILIÈRE ===");
+print("Informatique : " + db.etudiants.find({ filiere: "Informatique" }).count());
+print("Gestion : " + db.etudiants.find({ filiere: "Gestion" }).count());
+print("Anglais : " + db.etudiants.find({ filiere: "Anglais" }).count());
+
+print("\n=== EXEMPLE D'ÉTUDIANT ===");
+const exemple = db.etudiants.findOne();
+print("Nom : " + exemple.nom);
+print("Prénom : " + exemple.prenom);
+print("Filière : " + exemple.filiere);
+print("Nombre de notes : " + exemple.notes.length);
+print("\nSes 3 premières notes :");
+for (let i = 0; i < 3; i++) {
+    print("  - " + exemple.notes[i].cours + " : " + exemple.notes[i].valeur + " (" + exemple.notes[i].type_evaluation + ")");
+}
+
+print("\n=== SCRIPT TERMINÉ ===");
