@@ -1,0 +1,18 @@
+// 1. Moyenne par étudiant
+db.etudiants.aggregate([
+    { $unwind: "$notes" },
+    { $group: { _id: { nom: "$nom", prenom: "$prenom" }, moyenne: { $avg: "$notes.valeur" } } },
+    { $sort: { moyenne: -1 } }
+]);
+
+// 2. Moyenne par filière
+db.etudiants.aggregate([
+    { $unwind: "$notes" },
+    { $group: { _id: "$filiere", moyenne: { $avg: "$notes.valeur" } } }
+]);
+
+// 3. Moyenne par niveau
+db.etudiants.aggregate([
+    { $unwind: "$notes" },
+    { $group: { _id: "$notes.niveau", moyenne: { $avg: "$notes.valeur" } } }
+]);
